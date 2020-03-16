@@ -2,6 +2,7 @@
   <div id="app">
     <input type="text" v-model="term$" />
     <button :disabled="pending$" v-stream:click="click$">{{buttonText$}}</button>
+    <button  v-stream:click="cancelClick$">cancel</button>
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
@@ -27,16 +28,15 @@ import {
   switchMap,
   map,
   mapTo,
-  of,
   tap,
   catchError,
-  share,
-  startWith
+  share, takeUntil, take,
+  startWith, repeat
 } from "rxjs/operators";
 
 export default {
   name: "App",
-  domStreams: ["click$"],
+  domStreams: ["click$","cancelClick$"],
   data() {
     return {
       term: " "
@@ -60,10 +60,13 @@ export default {
       return name$.pipe(switchMap(name => package$({ name })));
     };
 
+   const blockers$ = this.cancelClick$.pipe(tap(_ => console.log('canceled')), take(1), repeat())
+    
     const fullData$ = this.click$
       .pipe(
         pluck("data"),
         switchMap((data = term$) => getPackage$(data)),
+        takeUntil(blockers$),
         // HANDLE AN ERROR
         catchError(err => {
           console.log("somemthing went wrong...", err);
@@ -73,27 +76,28 @@ export default {
       )
       // SHARE THE STREAM
       .pipe(share());
-
+    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
-    // end fullData$ (of package)
+    //end full data
 
     const term$ = this.$fromDOMEvent("input", "keyup").pipe(
       pluck("target", "value"),
       startWith("express")
     );
 
+      // pending is bool,false = no loading
     const pending$ = merge(
       this.click$.pipe(mapTo(true)),
+      this.cancelClick$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
 
-      // pending is bool,false = no loading
     const buttonText$ = pending$.pipe(
-        startWith('Check It'),
-        map(isLoad => (isLoad ? "Loading" : "Check It !"))
+      map(isLoad => (isLoad ? "Loading" : "Check it !")),
       );
+
 
     return {
       name$,
@@ -101,7 +105,7 @@ export default {
       dependencies$,
       term$,
       pending$,
-      buttonText$
+      buttonText$,
     };
   }
 };
