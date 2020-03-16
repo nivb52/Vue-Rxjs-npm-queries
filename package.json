@@ -11,7 +11,10 @@
   "dependencies": {
     "core-js": "^3.6.4",
     "register-service-worker": "^1.6.2",
+    "rxjs": "^6.5.4",
     "vue": "^2.6.11",
+    "vue-axios": "^2.1.5",
+    "vue-rx": "^6.2.0",
     "vuex": "^3.1.2"
   },
   "devDependencies": {
@@ -25,9 +28,6 @@
     "eslint-plugin-vue": "^6.1.2",
     "lint-staged": "^9.5.0",
     "vue-template-compiler": "^2.6.11"
-  },
-  "gitHooks": {
-    "pre-commit": "lint-staged"
   },
   "lint-staged": {
     "*.{js,jsx,vue}": [

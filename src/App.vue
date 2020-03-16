@@ -1,19 +1,29 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <div id="app">
+    <input type="text" v-model="term" />
+
   </div>
+
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
 
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  data() {
+    return {
+      term: "express"
+    };
+  },
+  subscriptions() {
+    const BASE_URL = "https://cors-anywhere.herokuapp.com/https://registry.npmjs.org/";
+    const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
+    const package$ = n => createLoader(`${BASE_URL}${n}/latest`);
+
+    
   }
 }
+
 </script>
 
 <style>
