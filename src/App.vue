@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <input type="text" v-model="term$" />
-    <button :disabled="disabled$" v-stream:click="click$">Load Data</button>
+    <button :disabled="pending$" v-stream:click="click$">{{buttonText$}}</button>
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
@@ -54,6 +54,7 @@ export default {
       return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`);
     };
 
+
     const getPackage$ = (name$ = term$) => {
       if (!isObservable(name$)) return package$(name$);
       return name$.pipe(switchMap(name => package$({ name })));
@@ -75,24 +76,32 @@ export default {
 
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
-    // const dependencies$ = fullData$  // for testing
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
+    // end fullData$ (of package)
+
     const term$ = this.$fromDOMEvent("input", "keyup").pipe(
       pluck("target", "value"),
       startWith("express")
     );
 
-    const disabled$ = merge(
+    const pending$ = merge(
       this.click$.pipe(mapTo(true)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
+
+      // pending is bool,false = no loading
+    const buttonText$ = pending$.pipe(
+        startWith('Check It'),
+        map(isLoad => (isLoad ? "Loading" : "Check It !"))
+      );
 
     return {
       name$,
       version$,
       dependencies$,
       term$,
-      disabled$
+      pending$,
+      buttonText$
     };
   }
 };
