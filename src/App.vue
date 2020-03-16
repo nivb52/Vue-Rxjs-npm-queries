@@ -1,12 +1,13 @@
 <template>
   <div id="app">
-    <input type="text" v-model="term$" />
+    <input type="text" v-model="term$" placeholder="express"/>
     <button :disabled="pending$" v-stream:click="click$">{{buttonText$}}</button>
-    <button  v-stream:click="cancelClick$">cancel</button>
+    <button v-stream:click="cancelClick$">cancel</button>
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
     </h1>
+    <p v-if="!dependencies$ && description$">{{description$}}</p>
     <ul class="tree">
       <li
         v-for="(version, name) in dependencies$"
@@ -23,20 +24,25 @@
 <script>
 import { merge, from, isObservable } from "rxjs";
 import {
-  pipe,
+  pipe, filter,
   pluck,
   switchMap,
   map,
   mapTo,
   tap,
   catchError,
-  share, takeUntil, take,
-  startWith, repeat
+  share,
+  takeUntil,
+  take,
+  startWith,
+  exhaustMap,
+  debounceTime,
+  repeat,
 } from "rxjs/operators";
 
 export default {
   name: "App",
-  domStreams: ["click$","cancelClick$"],
+  domStreams: ["click$", "cancelClick$"],
   data() {
     return {
       term: " "
@@ -60,12 +66,29 @@ export default {
       return name$.pipe(switchMap(name => package$({ name })));
     };
 
-   const blockers$ = this.cancelClick$.pipe(tap(_ => console.log('canceled')), take(1), repeat())
-    
-    const fullData$ = this.click$
+    const blockers$ = this.cancelClick$.pipe(
+      tap(() => console.log("canceled")),
+    );
+
+    const term$ = this.$fromDOMEvent("input", "keyup").pipe(
+      pluck("target", "value"),
+      filter(value => value.trim() !== '' ),
+      debounceTime(650)
+    );
+
+
+    const enter$ = this.$fromDOMEvent("input", "keydown").pipe(
+      filter(key => key.code === 'Enter' ),
+      tap(k => console.log(k)),
+      take(1),
+      repeat()
+     );
+
+    const search$ = merge(this.click$,enter$ ) 
+    const fullData$ = search$
       .pipe(
-        pluck("data"),
-        switchMap((data = term$) => getPackage$(data)),
+        pluck("data" ||  ''),
+        exhaustMap((data) => getPackage$(data)),
         takeUntil(blockers$),
         // HANDLE AN ERROR
         catchError(err => {
@@ -80,14 +103,10 @@ export default {
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
+    const description$ = fullData$.pipe(pluck("description"));
     //end full data
-
-    const term$ = this.$fromDOMEvent("input", "keyup").pipe(
-      pluck("target", "value"),
-      startWith("express")
-    );
-
-      // pending is bool,false = no loading
+    
+    // pending is bool,false = no loading
     const pending$ = merge(
       this.click$.pipe(mapTo(true)),
       this.cancelClick$.pipe(mapTo(false)),
@@ -95,17 +114,19 @@ export default {
     );
 
     const buttonText$ = pending$.pipe(
-      map(isLoad => (isLoad ? "Loading" : "Check it !")),
-      );
-
+      startWith('Check it!'),
+      map(isLoad => (isLoad ? "Loading" : "Check it !"))
+    );
 
     return {
       name$,
       version$,
       dependencies$,
+      description$,
       term$,
       pending$,
       buttonText$,
+      enter$
     };
   }
 };
