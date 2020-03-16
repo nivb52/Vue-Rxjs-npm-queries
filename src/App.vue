@@ -27,6 +27,7 @@ import {
   map,
   of,
   catchError,
+  share,
 } from "rxjs/operators";
 
 export default {
@@ -55,6 +56,8 @@ export default {
           // return throwError(err);
         })
       )
+      // SHARE THE STREAM
+      .pipe(share());
 
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
