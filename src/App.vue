@@ -10,7 +10,7 @@
       <li
         v-for="(version, name) in dependencies$"
         :key="name"
-        
+        v-stream:click="{ subject: click$, data: {name,version} }"
       >
         {{name}}
         <sup>{{version}}</sup>
@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import { from } from "rxjs";
+import { from, isObservable } from "rxjs";
 import {
   pipe,
   pluck,
@@ -46,16 +46,21 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
-    const package$ = (data, version = 'latest') => createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`)
+    const package$ = (data) => {
+      let {name = data, version = 'latest'} = data
+      version = version.substring(0,1) === '~' ? version.substring(1) : version 
+      return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`)
+    }
       
 
     const getPackage$ = (name$ = term$) => {
+      if ( !isObservable(name$)) return package$(name$)
       return name$.pipe(switchMap(name => package$({name})))};
 
     const fullData$ = this.click$
       .pipe(
         pluck("data"),
-        switchMap(() => getPackage$(term$)),
+        switchMap((data = term$) => getPackage$(data)),
         // HANDLE AN ERROR
         catchError(err => {
           console.log("somemthing went wrong...", err);
@@ -97,5 +102,8 @@ ul.tree {
   text-align: start;
   list-style: none;
   padding-left: 0px;
+}
+ul.tree li {
+cursor: pointer;
 }
 </style>
