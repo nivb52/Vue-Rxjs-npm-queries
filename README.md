@@ -1,5 +1,6 @@
 # Vue.js-RxJS of npm-queries
-See [Website on Github Pages](https://nivb52.github.io/Vue-Rxjs-npm-queries/)
+[ See It Live](https://nivb52.github.io/Vue-Rxjs-npm-queries/) on Github Pages
+(psss...open the console) 
 
 ### Rxjs 6  
 * ajax cache
