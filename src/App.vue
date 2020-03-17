@@ -1,15 +1,15 @@
 <template>
   <div id="app">
     <input
-      type="text"
+      class="search-package"
       autofocus
-      :disabled="pending$"
       v-on:keyup.enter="doSearch"
       v-model="term"
       placeholder="express"
     />
-    <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
-    <button v-stream:click="cancelClick$">cancel</button>
+
+    <button class="blue" :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
+    <button class="light" v-stream:click="cancelClick$">Cancel</button>
     <!-- ========================= -->
     <!-- // SHOW DATA  -->
     <h1>
@@ -17,6 +17,10 @@
       <sup>{{version$}}</sup>
     </h1>
     <p v-if="!dependencies$ && description$">{{description$}}</p>
+
+    <!-- /////////// -->
+    <!-- /////////// -->
+    <!-- /////////// -->
     <ul class="tree">
       <li
         v-for="(version, name) in dependencies$"
@@ -94,6 +98,10 @@ export default {
       // debounceTime(650)
     );
 
+    const enter$ = this.$createObservableMethod("doSearch").pipe(
+      mapTo(_ => of(true))
+    );
+
     const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
       filter(k => k.code === "Escape"),
       filter(_ => this.$data.term.trim() !== ""),
@@ -108,11 +116,7 @@ export default {
 
     const blockers$ = merge(cancelButton$, esc$);
 
-    const enter$ = this.$createObservableMethod("doSearch").pipe(
-      mapTo(_ => of(true))
-    );
 
-    // full data
     const fullData$ = merge(this.click$, enter$)
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
@@ -121,7 +125,7 @@ export default {
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
-        // HANDLE  ERROR
+        // HANDLE ERROR
         catchError(err => {
           console.log("somemthing went wrong...", err);
           of(`Bad Promise: ${err}`);
@@ -140,7 +144,7 @@ export default {
     // ===============
     // app ui state
     const pending$ = merge(
-    // pending is bool,false = no loading
+      // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
       this.cancelClick$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
@@ -166,6 +170,8 @@ export default {
 </script>
 
 <style>
+/* @import "~bulma"; */
+/* @import "~buefy/src/scss/buefy"; */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -173,6 +179,7 @@ export default {
   color: #2c3e50;
   margin: 60px auto;
 }
+
 ul.tree {
   margin: 0 10%;
   text-align: start;
@@ -181,5 +188,41 @@ ul.tree {
 }
 ul.tree li {
   cursor: pointer;
+  border-bottom-color: #dbdbdb;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  color: #4a4a4a;
+  margin-bottom: -1px;
+  padding: 0.5em 1em;
+}
+button.blue {
+  background-color: #167df0;
+  color: #fff;
+}
+button.light {
+  background-color: whitesmoke;
+  color: #363636;
+}
+
+button {
+  text-align: center;
+  white-space: nowrap;
+  border-color: transparent;
+  border-radius: 2px;
+  font-size: 1rem;
+  padding: 0.5rem 0.75em;
+}
+
+input.search-package {
+  width: auto;
+  margin: 0 auto;
+  box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.1);
+  padding-left: 2.25em;
+  background-color: white;
+  border-color: #dbdbdb;
+  border-radius: 4px;
+  color: #363636;
+  font-size: 1rem;
+  height: 2em;
 }
 </style>
