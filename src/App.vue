@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+  
     <div>
       <input
         class="search-package"
@@ -12,8 +13,9 @@
       <button class="blue" :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
       <button class="light" v-stream:click="cancelClick$">Cancel</button>
       <!-- ========================= -->
-      <!-- // SHOW DATA  -->
     </div>
+      <!-- // SHOW DATA  -->
+    <article>
     <div v-if="pending$" class="loader-container">
       <div class="lds-facebook">
         <div></div>
@@ -21,27 +23,27 @@
         <div></div>
       </div>
     </div>
-    <!-- <div v-if="!pending$" class="lds-hourglass"></div> -->
+      <h1>
+        {{name$}}
+        <sup>{{version$}}</sup>
+      </h1>
+      <p v-if="!dependencies$ && description$">{{description$}}</p>
 
-    <h1>
-      {{name$}}
-      <sup>{{version$}}</sup>
-    </h1>
-    <p v-if="!dependencies$ && description$">{{description$}}</p>
-
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <ul class="tree">
-      <li
-        v-for="(version, name) in dependencies$"
-        :key="name"
-        v-stream:click="{ subject: click$, data: {name,version} }"
-      >
-        {{name}}
-        <sup>{{version}}</sup>
-      </li>
-    </ul>
+      <!-- /////////// -->
+      <!-- /////////// -->
+      <!-- /////////// -->
+      <ul class="tree">
+        <li
+          v-for="(version, name) in dependencies$"
+          :key="name"
+          v-stream:click="{ subject: click$, data: {name,version} }"
+        >
+          {{name}}
+          <sup>{{version}}</sup>
+        </li>
+      </ul>
+    </article>
+ 
   </div>
 </template>
 
@@ -189,8 +191,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   margin: 60px auto;
-  display: flex;
-  justify-content: center;
+  text-align: center;
   box-sizing: border-box;
 }
 
@@ -213,6 +214,10 @@ button.blue {
   background-color: #167df0;
   color: #fff;
 }
+
+
+
+/* form fields */
 button.light {
   background-color: whitesmoke;
   color: #363636;
