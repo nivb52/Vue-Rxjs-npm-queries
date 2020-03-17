@@ -15,7 +15,6 @@
       <!-- ========================= -->
     </div>
       <!-- // SHOW DATA  -->
-    <article>
     <div v-if="pending$" class="loader-container">
       <div class="lds-facebook">
         <div></div>
@@ -23,6 +22,7 @@
         <div></div>
       </div>
     </div>
+    <article v-else>
       <h1>
         {{name$}}
         <sup>{{version$}}</sup>
