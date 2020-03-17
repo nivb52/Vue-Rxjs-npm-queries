@@ -1,8 +1,10 @@
 <template>
   <div id="app">
-    <input type="text" v-model="term$" placeholder="express"/>
+    <input type="text" autofocus :disabled="pending$" v-on:keyup.enter="searchOnEnter" v-model="term" placeholder="express" />
     <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'GO'}}</button>
     <button v-stream:click="cancelClick$">cancel</button>
+    <!-- ========================= -->
+    <!-- // SHOW DATA  -->
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
@@ -24,7 +26,8 @@
 <script>
 import { merge, from, isObservable } from "rxjs";
 import {
-  pipe, filter,
+  pipe,
+  filter,
   pluck,
   switchMap,
   map,
@@ -37,8 +40,7 @@ import {
   take,
   startWith,
   exhaustMap,
-  debounceTime,
-  repeat,
+  debounceTime
 } from "rxjs/operators";
 
 export default {
@@ -46,52 +48,63 @@ export default {
   domStreams: ["click$", "cancelClick$"],
   data() {
     return {
-      term: " "
+      term: "",
+      isEnter: false
     };
+  },
+  methods: {
+    searchOnEnter: function() {
+      return this.$data.isEnter = true
+      
+    }
   },
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
-    // const package$ = n => createLoader(`${BASE_URL}`);
     const package$ = data => {
       let { name = data, version = "latest" } = data;
       version =
         version.substring(0, 1) === "~" ? version.substring(1) : version;
-      return createLoader(`${CROS_URL}${BASE_URL}${encodeURIComponent(name)}/${encodeURIComponent(version)}`);
-      // return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`);
+      name = name.trim();
+      return createLoader(
+        `${CROS_URL}${BASE_URL}${encodeURIComponent(name)}/${encodeURIComponent(
+          version
+        )}`
+      );
     };
 
-
-    const getPackage$ = (name$ = term$) => {
+    const getPackage$ = (name$ = this.$data.term) => {
       if (!isObservable(name$)) return package$(name$);
       return name$.pipe(switchMap(name => package$({ name })));
     };
+    // END AJAX STAFF
 
     const blockers$ = this.cancelClick$.pipe(
-      tap(_ => console.log("canceled")),
+      tap(() => console.log("canceled"))
     );
 
-    const term$ = this.$fromDOMEvent("input", "keyup").pipe(
-      pluck("target", "value"),
-      filter(value => value.trim() !== '' ),
-      debounceTime(650)
+    const term$ = this.$watchAsObservable("term").pipe(
+      pluck("newValue"),
+      filter(value => value.trim() !== ""),
+      // debounceTime(650)
     );
 
+    const enter$ = this.$watchAsObservable("isEnter").pipe(
+      tap(v => console.log(v)),
+      filter(val => val.newValue === true),
+      tap(_=> this.$data.isEnter = false),
+      mapTo(_ => of(true))
+    );
 
-    const enter$ = this.$fromDOMEvent("input", "keydown").pipe(
-      filter(key => key.code === 'Enter' ),
-      tap(k => console.log(k)),
-      take(1),
-      repeat()
-     );
+    const search$ = merge(this.click$, enter$ );
 
-    const search$ = merge(this.click$,enter$ ) 
     const fullData$ = search$
       .pipe(
-        pluck("data" ||  ''),
-        exhaustMap((data) => getPackage$(data)),
+        tap(_ => console.log("searching ...")),
+        pluck("data" || ""),
+        exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
         // HANDLE AN ERROR
         catchError(err => {
@@ -109,7 +122,7 @@ export default {
     const description$ = fullData$.pipe(pluck("description"));
     // const dependencies$ = fullData$  // for testing
     //end full data
-    
+
     // pending is bool,false = no loading
     const pending$ = merge(
       this.click$.pipe(mapTo(true)),
@@ -118,7 +131,7 @@ export default {
     );
 
     const buttonText$ = pending$.pipe(
-      startWith('Check It!'),
+      startWith('Check It !'),
       map(isLoad => (isLoad ? "Loading" : "Check it !"))
     );
 
@@ -127,9 +140,9 @@ export default {
       version$,
       dependencies$,
       description$,
-      term$,
       pending$,
       buttonText$,
+      term$,
       enter$
     };
   }
