@@ -1,5 +1,5 @@
 # Vue.js-RxJS of npm-queries
-https://nivb52.github.io/Vue-Rxjs-npm-queries/
+See [Website on Github Pages](https://nivb52.github.io/Vue-Rxjs-npm-queries/)
 
 ### Rxjs 6  
 * ajax cache
@@ -28,6 +28,3 @@ npm install
 npm start
 
 ```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
