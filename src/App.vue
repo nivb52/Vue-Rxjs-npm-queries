@@ -121,10 +121,10 @@ export default {
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
-        // HANDLE getPN ERROR
-        catchError(ergetP => {
+        // HANDLE  ERROR
+        catchError(err => {
           console.log("somemthing went wrong...", err);
-          of(`Bad Promise: ${error}`);
+          of(`Bad Promise: ${err}`);
           // return throwError(err);
         })
       )
