@@ -1,17 +1,28 @@
 <template>
   <div id="app">
-    <input
-      class="search-package"
-      autofocus
-      v-on:keyup.enter="doSearch"
-      v-model="term"
-      placeholder="express"
-    />
+    <div>
+      <input
+        class="search-package"
+        autofocus
+        v-on:keyup.enter="doSearch"
+        v-model="term"
+        placeholder="express"
+      />
 
-    <button class="blue" :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
-    <button class="light" v-stream:click="cancelClick$">Cancel</button>
-    <!-- ========================= -->
-    <!-- // SHOW DATA  -->
+      <button class="blue" :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
+      <button class="light" v-stream:click="cancelClick$">Cancel</button>
+      <!-- ========================= -->
+      <!-- // SHOW DATA  -->
+    </div>
+    <div v-if="pending$" class="loader-container">
+      <div class="lds-facebook">
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+    <!-- <div v-if="!pending$" class="lds-hourglass"></div> -->
+
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
@@ -98,10 +109,6 @@ export default {
       // debounceTime(650)
     );
 
-    const enter$ = this.$createObservableMethod("doSearch").pipe(
-      mapTo(_ => of(true))
-    );
-
     const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
       filter(k => k.code === "Escape"),
       filter(_ => this.$data.term.trim() !== ""),
@@ -116,6 +123,9 @@ export default {
 
     const blockers$ = merge(cancelButton$, esc$);
 
+    const enter$ = this.$createObservableMethod("doSearch").pipe(
+      mapTo(_ => of(true))
+    );
 
     const fullData$ = merge(this.click$, enter$)
       .pipe(
@@ -146,7 +156,9 @@ export default {
     const pending$ = merge(
       // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
+      enter$.pipe(mapTo(true)),
       this.cancelClick$.pipe(mapTo(false)),
+      esc$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
 
@@ -170,8 +182,7 @@ export default {
 </script>
 
 <style>
-/* @import "~bulma"; */
-/* @import "~buefy/src/scss/buefy"; */
+@import "assets/loader-fb.css";
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -224,5 +235,12 @@ input.search-package {
   color: #363636;
   font-size: 1rem;
   height: 2em;
+}
+
+.loader-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
 }
 </style>
