@@ -1,5 +1,5 @@
 # Vue.js-RxJS of npm-queries
-[ See It Live](https://nivb52.github.io/Vue-Rxjs-npm-queries/) on Github Pages
+[See It Live](https://nivb52.github.io/Vue-Rxjs-npm-queries/) on Github Pages
 (psss...open the console) 
 
 ### Rxjs 6  
@@ -29,3 +29,4 @@ npm install
 npm start
 
 ```
+https://nivb52.github.io/Vue-Rxjs-npm-queries/
