@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import App from './App.vue'
 
-import Rx from 'rxjs';
+// import Rx from 'rxjs';
 import VueRx from 'vue-rx';
 
 import axios from 'axios';
