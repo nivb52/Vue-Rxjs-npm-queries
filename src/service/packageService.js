@@ -11,8 +11,8 @@ const extractPackageInfo = data => {
     if (!version) {
       version = 'latest';
     } else {
-      const isSpecialSign = str => {
-          return ['@','~','^'].find( sign => version.search(sign) > -1)
+      const isSpecialSign = ver => {
+          return ['@','~','\\^'].find( sign => ver.search(sign) > -1)
       }
       const startStrFrom = isSpecialSign ? 1 : 0
       version = version.substr(startStrFrom);
