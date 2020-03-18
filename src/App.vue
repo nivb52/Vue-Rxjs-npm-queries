@@ -21,35 +21,34 @@
         <div></div>
       </div>
     </div>
+    <!-- <div v-if="!pending$" class="lds-hourglass"></div> -->
 
-    <article v-else>
-      <h1>
-        {{name$}}
-        <sup>{{version$}}</sup>
-      </h1>
-      <p v-if="!dependencies$ && description$">{{description$}}</p>
+    <h1>
+      {{name$}}
+      <sup>{{version$}}</sup>
+    </h1>
+    <p v-if="!dependencies$ && description$">{{description$}}</p>
 
-      <!-- /////////// -->
-      <!-- /////////// -->
-      <!-- /////////// -->
-      <ul class="tree">
-        <li
-          v-for="(version, name) in dependencies$"
-          :key="name"
-          v-stream:click="{ subject: click$, data: {name,version} }"
-        >
-          {{name}}
-          <sup>{{version}}</sup>
-        </li>
-      </ul>
-    </article>
+    <!-- /////////// -->
+    <!-- /////////// -->
+    <!-- /////////// -->
+    <ul class="tree">
+      <li
+        v-for="(version, name) in dependencies$"
+        :key="name"
+        v-stream:click="{ subject: click$, data: {name,version} }"
+      >
+        {{name}}
+        <sup>{{version}}</sup>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script>
 import { throwError, of, merge, race, from, isObservable, timer } from "rxjs";
 import {
-  pipe,
+  pipe, 
   filter,
   pluck,
   switchMap,
@@ -66,20 +65,21 @@ import {
   delay,
   timeout,
   repeat,
-  takeWhile
+  takeWhile,
 } from "rxjs/operators";
-// import { ToastProgrammatic as Toast } from "buefy";
+import { ToastProgrammatic as Toast } from 'buefy'
+import extractPackageInfo from './service/packageService'
 
 export default {
   name: "App",
   domStreams: ["click$", "cancelClick$"],
   data() {
     return {
-      term: ""
+      term: "",
     };
   },
   methods: {
-    createToast(msg,type ='is-info',position = 'is-top') {
+            createToast(msg,type ='is-info',position = 'is-top') {
                 this.$buefy.toast.open(
                   {duration: 3500,
                     message: msg,
@@ -93,31 +93,12 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
     // const CROS_URL = "https://error.com/";
 
-    const createLoader = url =>
-      race(timer(5000), from(this.$http.get(url)).pipe(pluck("data")));
+    const createLoader = url => race(timer(5000),from(this.$http.get(url)).pipe(pluck("data")))
 
     const cache = {};
     const package$ = data => {
-      let name, version;
-      if (typeof data === "string") {
-        [name, version] = data.split(" ");
-      } else {
-        name = data.name;
-        version = data.version;
-      }
-      //modify for ajax
-      name = name.trim();
-      if (!version) {
-        version = "latest";
-      } else {
-        const specialSign =
-          version.search("@") > -1 ? version.search("@") : version.search("~");
-        version = version.substr(specialSign + 1);
-        // add 0 before '.' to make search easier
-        if (version.substr(0, 1) === ".") {
-          version = "0" + version;
-        }
-      }
+      const [name,version] = extractPackageInfo(data)
+      // return
       const key = name + "-" + version;
       return cache[key]
         ? cache[key]
