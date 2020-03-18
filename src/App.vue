@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import { merge, of, from, isObservable, timer } from "rxjs";
+import { throwError, merge, race, of, from, isObservable, timer } from "rxjs";
 import {
   pipe,
   filter,
@@ -65,7 +65,8 @@ import {
   debounceTime,
   delay,
   timeout,
-  repeat
+  repeat,
+  takeWhile
 } from "rxjs/operators";
 
 export default {
@@ -79,16 +80,33 @@ export default {
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
     const BASE_URL = "https://registry.npmjs.org/";
+    // const CROS_URL = "https://error.com/";
 
     const createLoader = url =>
-      race(timer(4000), from(this.$http.get(url)).pipe(pluck("data")));
+      race(timer(5000), from(this.$http.get(url)).pipe(pluck("data")));
 
     const cache = {};
     const package$ = data => {
-      let { name = data, version = "latest" } = data;
-      version =
-        version.substring(0, 1) === "~" ? version.substring(1) : version;
+      let name, version;
+      if (typeof data === "string") {
+        [name, version] = data.split(" ");
+      } else {
+        name = data.name;
+        version = data.version;
+      }
+      //modify for ajax
       name = name.trim();
+      if (!version) {
+        version = "latest";
+      } else {
+        const specialSign =
+          version.search("@") > -1 ? version.search("@") : version.search("~");
+        version = version.substr(specialSign + 1);
+        // add 0 before '.' to make search easier
+        if (version.substr(0, 1) === ".") {
+          version = "0" + version;
+        }
+      }
       const key = name + "-" + version;
       return cache[key]
         ? cache[key]
@@ -135,14 +153,13 @@ export default {
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
         catchError(err => {
-          mapTo(_ => esc$);
-          console.log("somemthing went wrong...", err);
-          // RESET THE APP
-          this.cancelClick$.next(true);
-          return of(`Bad Promise: ${err}`);
+          console.log("something went wrong", err);
+          return this.cancelClick$.next(true);
         })
       )
+      // SHARE THE STREAM
       .pipe(share(), repeat());
+    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
@@ -158,6 +175,7 @@ export default {
       blockers$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
+    // .pipe(timer(6000), mapTo(_=> this.pending$.next(false) ))
 
     const buttonText$ = pending$.pipe(
       map(isLoad => (isLoad ? "Loading" : "Go")),
@@ -179,7 +197,6 @@ export default {
 </script>
 
 <style>
-/* @import "assets/loader.css"; */
 @import "assets/loader-fb.css";
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
@@ -187,7 +204,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   margin: 60px auto;
-  justify-content: center;
+  text-align: center;
   box-sizing: border-box;
 }
 
