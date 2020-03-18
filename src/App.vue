@@ -81,7 +81,7 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url =>
-      race(timer(3000), from(this.$http.get(url)).pipe(pluck("data")));
+      race(timer(4000), from(this.$http.get(url)).pipe(pluck("data")));
 
     const cache = {};
     const package$ = data => {
