@@ -91,16 +91,16 @@ export default {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
     const BASE_URL = "https://registry.npmjs.org/";
 
-    const createLoader = url => race(timer(5000),from(this.$http.get(url)).pipe(pluck("data")))
-
+    const createAjax = url => race(timer(4000),from(this.$http.get(url)).pipe(pluck("data")))
+    
+    //  using cache and call ajax
     const cache = {};
     const package$ = data => {
       const [name,version] = extractPackageInfo(data)
-      // return
       const key = name + "-" + version;
       return cache[key]
         ? cache[key]
-        : (cache[key] = createLoader(
+        : (cache[key] = createAjax(
             `${CROS_URL}${BASE_URL}${encodeURIComponent(
               name
             )}/${encodeURIComponent(version)}`
