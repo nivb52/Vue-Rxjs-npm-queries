@@ -68,7 +68,7 @@ import {
   repeat,
   takeWhile
 } from "rxjs/operators";
-import { ToastProgrammatic as Toast } from "buefy";
+// import { ToastProgrammatic as Toast } from "buefy";
 
 export default {
   name: "App",
@@ -79,9 +79,14 @@ export default {
     };
   },
   methods: {
-    createToast(msg, type = "is-info", position = "is-top") {
-      this.$buefy.toast.open({ duration: 3500, message: msg, position, type });
-    }
+    createToast(msg,type ='is-info',position = 'is-top') {
+                this.$buefy.toast.open(
+                  {duration: 3500,
+                    message: msg,
+                    position, 
+                    type
+                })
+            }
   },
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
@@ -139,18 +144,20 @@ export default {
       filter(_ => this.$data.term.trim() !== ""),
       mapTo(k => of(true)),
       filter(_ => pending$),
-      tap(_ => this.createToast(`operation canceled`))
+      tap(_ =>  this.createToast(`operation canceled`))
     );
 
-    const cancelButton$ = this.cancelClick$.pipe(mapTo(_ => of(true)));
+    const cancelButton$ = this.cancelClick$.pipe(
+      mapTo(_ => of(true))
+    );
 
-    const blockers$ = merge(cancelButton$, esc$)
-      .pipe(tap(_ => console.log("canceled")))
-      .pipe(share());
+    const blockers$ = merge(cancelButton$, esc$).pipe(
+      tap(_ => console.log("canceled"))).pipe(share());
 
     const enter$ = this.$createObservableMethod("doSearch").pipe(
       mapTo(_ => of(true))
     );
+
 
     const fullData$ = merge(this.click$, enter$)
       .pipe(
@@ -159,24 +166,24 @@ export default {
         // delay(4000), // testing
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
-        // stop at blockers
-        takeUntil(blockers$),
-        catchError(err => {
-          const errorMsg = "something went wrong";
-          console.warn(errorMsg, err);
-          this.cancelClick$.next(true);
-          this.createToast(errorMsg, "is-danger", "is-bottom");
-          return of(errorMsg);
-        })
-      )
+        takeUntil(blockers$), 
+        catchError(err => { 
+         const errorMsg = 'something went wrong'
+          console.warn(errorMsg, err)
+          this.cancelClick$.next(true)
+          this.createToast(errorMsg, 'is-danger','is-bottom')
+          return of(errorMsg)
+          })
+        )
       // SHARE THE STREAM
       .pipe(share(), repeat());
+    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
     const description$ = fullData$.pipe(pluck("description"));
     //end full data
-
+   
     // ===============
     // app ui state
     const pending$ = merge(
@@ -184,8 +191,8 @@ export default {
       this.click$.pipe(mapTo(true)),
       enter$.pipe(mapTo(true)),
       blockers$.pipe(mapTo(false)),
-      fullData$.pipe(mapTo(false), startWith(false))
-    );
+      fullData$.pipe(mapTo(false), startWith(false)))
+    // .pipe(timer(6000), mapTo(_=> this.pending$.next(false) ))
 
     const buttonText$ = pending$.pipe(
       map(isLoad => (isLoad ? "Loading" : "Go")),
@@ -200,7 +207,7 @@ export default {
       pending$,
       buttonText$,
       term$,
-      enter$
+      enter$,
     };
   }
 };
