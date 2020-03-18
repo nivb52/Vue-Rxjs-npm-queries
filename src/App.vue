@@ -67,7 +67,6 @@ import {
   repeat,
   takeWhile,
 } from "rxjs/operators";
-import { ToastProgrammatic as Toast } from 'buefy'
 import extractPackageInfo from './service/packageService'
 
 export default {
@@ -91,7 +90,6 @@ export default {
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
     const BASE_URL = "https://registry.npmjs.org/";
-    // const CROS_URL = "https://error.com/";
 
     const createLoader = url => race(timer(5000),from(this.$http.get(url)).pipe(pluck("data")))
 
@@ -114,7 +112,7 @@ export default {
       return data$.pipe(switchMap(data => package$({ data })));
     };
     // END AJAX STAFF
-
+    ///////////
     const term$ = this.$watchAsObservable("term").pipe(
       pluck("newValue"),
       filter(value => value.trim() !== "")
@@ -147,7 +145,9 @@ export default {
         // delay(4000), // testing
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
+        // stop ajax at blockers
         takeUntil(blockers$), 
+        // handle Error
         catchError(err => { 
          const errorMsg = 'something went wrong'
           console.warn(errorMsg, err)
@@ -158,22 +158,20 @@ export default {
         )
       // SHARE THE STREAM
       .pipe(share(), repeat());
-    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
     const description$ = fullData$.pipe(pluck("description"));
     //end full data
-   
     // ===============
-    // app ui state
+   
+    // control app ui state
     const pending$ = merge(
       // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
       enter$.pipe(mapTo(true)),
       blockers$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false)))
-    // .pipe(timer(6000), mapTo(_=> this.pending$.next(false) ))
 
     const buttonText$ = pending$.pipe(
       map(isLoad => (isLoad ? "Loading" : "Go")),
