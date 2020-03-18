@@ -78,9 +78,9 @@ export default {
     };
   },
   methods: {
-            createToast(msg,type ='is-info',position = 'is-top') {
+            createToast(msg,type ='is-info',position = 'is-top', duration = 3000) {
                 this.$buefy.toast.open(
-                  {duration: 3500,
+                  {duration,
                     message: msg,
                     position, 
                     type
@@ -137,7 +137,7 @@ export default {
       mapTo(_ => of(true))
     );
 
-
+    const errorMsg = 'something went wrong'
     const fullData$ = merge(this.click$, enter$)
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
@@ -148,12 +148,11 @@ export default {
         // stop ajax at blockers
         takeUntil(blockers$), 
         // handle Error
-        catchError(err => { 
-         const errorMsg = 'something went wrong'
-          console.warn(errorMsg, err)
+        catchError((err, error$) => { 
+          console.error(err)
           this.cancelClick$.next(true)
-          this.createToast(errorMsg, 'is-danger','is-bottom')
-          return of(errorMsg)
+          this.createToast(errorMsg, 'is-danger','is-top', 3500)
+          return error$
           })
         )
       // SHARE THE STREAM
