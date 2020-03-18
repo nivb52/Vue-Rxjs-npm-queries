@@ -130,21 +130,19 @@ export default {
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
         tap(_ => console.log("searching ...")),
-        delay(4000), // testing
+        // delay(4000), // testing
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
-        // HANDLE ERROR
         catchError(err => {
           mapTo(_ => esc$);
           console.log("somemthing went wrong...", err);
-          of(`Bad Promise: ${err}`);
-          // return throwError(err);
+          // RESET THE APP
+          this.cancelClick$.next(true);
+          return of(`Bad Promise: ${err}`);
         })
       )
-      // SHARE THE STREAM
       .pipe(share(), repeat());
-    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
@@ -189,7 +187,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   margin: 60px auto;
-  text-align: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 
