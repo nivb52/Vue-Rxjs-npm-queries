@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <main id="app">
     <div>
       <input
         class="search-package"
@@ -12,8 +12,8 @@
       <button class="blue" :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
       <button class="light" v-stream:click="cancelClick$">Cancel</button>
       <!-- ========================= -->
-      <!-- // SHOW DATA  -->
     </div>
+<!-- loader -->
     <div v-if="pending$" class="loader-container">
       <div class="lds-facebook">
         <div></div>
@@ -21,34 +21,33 @@
         <div></div>
       </div>
     </div>
-    <!-- <div v-if="!pending$" class="lds-hourglass"></div> -->
-
-    <h1>
-      {{name$}}
-      <sup>{{version$}}</sup>
-    </h1>
-    <p v-if="!dependencies$ && description$">{{description$}}</p>
-
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <ul class="tree">
-      <li
-        v-for="(version, name) in dependencies$"
-        :key="name"
-        v-stream:click="{ subject: click$, data: {name,version} }"
-      >
-        {{name}}
-        <sup>{{version}}</sup>
-      </li>
-    </ul>
-  </div>
+      <!-- /////////// -->
+<!-- // SHOW DATA  -->
+      <!-- /////////// -->
+    <article v-else>
+      <h1>
+        {{name$}}
+        <sup>{{version$}}</sup>
+      </h1>
+      <p v-if="!dependencies$ && description$">{{description$}}</p>
+      <ul class="tree">
+        <li
+          v-for="(version, name) in dependencies$"
+          :key="name"
+          v-stream:click="{ subject: click$, data: {name,version} }"
+        >
+          {{name}}
+          <sup>{{version}}</sup>
+        </li>
+      </ul>
+    </article>
+  </main>
 </template>
 
 <script>
 import { throwError, of, merge, race, from, isObservable, timer } from "rxjs";
 import {
-  pipe, 
+  pipe,
   filter,
   pluck,
   switchMap,
@@ -65,54 +64,25 @@ import {
   delay,
   timeout,
   repeat,
-  takeWhile,
+  takeWhile
 } from "rxjs/operators";
-import extractPackageInfo from './service/packageService'
+import PackageService from "./service/packageService";
 
 export default {
   name: "App",
   domStreams: ["click$", "cancelClick$"],
   data() {
     return {
-      term: "",
+      term: ""
     };
   },
   methods: {
-            createToast(msg,type ='is-info',position = 'is-top', duration = 3000) {
-                this.$buefy.toast.open(
-                  {duration,
-                    message: msg,
-                    position, 
-                    type
-                })
-            }
+    createToast(msg, type = "is-info", position = "is-top", duration = 3000) {
+      this.$buefy.toast.open({ duration, message: msg, position, type });
+    }
   },
   subscriptions() {
-    const CROS_URL = "https://cors-anywhere.herokuapp.com/";
-    const BASE_URL = "https://registry.npmjs.org/";
 
-    const createAjax = url => race(timer(4000),from(this.$http.get(url)).pipe(pluck("data")))
-    
-    //  using cache and call ajax
-    const cache = {};
-    const package$ = data => {
-      const [name,version] = extractPackageInfo(data)
-      const key = name + "-" + version;
-      return cache[key]
-        ? cache[key]
-        : (cache[key] = createAjax(
-            `${CROS_URL}${BASE_URL}${encodeURIComponent(
-              name
-            )}/${encodeURIComponent(version)}`
-          ));
-    };
-
-    const getPackage$ = (data$ = this.$data.term) => {
-      if (!isObservable(data$)) return package$(data$);
-      return data$.pipe(switchMap(data => package$({ data })));
-    };
-    // END AJAX STAFF
-    ///////////
     const term$ = this.$watchAsObservable("term").pipe(
       pluck("newValue"),
       filter(value => value.trim() !== "")
@@ -123,38 +93,37 @@ export default {
       filter(_ => this.$data.term.trim() !== ""),
       mapTo(k => of(true)),
       filter(_ => pending$),
-      tap(_ =>  this.createToast(`operation canceled`))
+      tap(_ => this.createToast(`operation canceled`))
     );
 
-    const cancelButton$ = this.cancelClick$.pipe(
-      mapTo(_ => of(true))
-    );
+    const cancelButton$ = this.cancelClick$.pipe(mapTo(_ => of(true)));
 
-    const blockers$ = merge(cancelButton$, esc$).pipe(
-      tap(_ => console.log("canceled"))).pipe(share());
+    const blockers$ = merge(cancelButton$, esc$)
+      .pipe(tap(_ => console.log("canceled")))
+      .pipe(share());
 
     const enter$ = this.$createObservableMethod("doSearch").pipe(
       mapTo(_ => of(true))
     );
 
-    const errorMsg = 'something went wrong'
+    const errorMsg = "something went wrong";
     const fullData$ = merge(this.click$, enter$)
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
         tap(_ => console.log("searching ...")),
         // delay(4000), // testing
         pluck("data" || ""),
-        exhaustMap(data => getPackage$(data)),
+        exhaustMap((data = this.$data.term)  => PackageService.getPackage$(data)),
         // stop ajax at blockers
-        takeUntil(blockers$), 
+        takeUntil(blockers$),
         // handle Error
-        catchError((err, error$) => { 
-          console.error(err)
-          this.cancelClick$.next(true)
-          this.createToast(errorMsg, 'is-danger','is-top', 3500)
-          return error$
-          })
-        )
+        catchError((err, error$) => {
+          console.error(err);
+          this.cancelClick$.next(true);
+          this.createToast(errorMsg, "is-danger", "is-top", 3500);
+          return error$;
+        })
+      )
       // SHARE THE STREAM
       .pipe(share(), repeat());
     const name$ = fullData$.pipe(pluck("name"));
@@ -163,14 +132,15 @@ export default {
     const description$ = fullData$.pipe(pluck("description"));
     //end full data
     // ===============
-   
+
     // control app ui state
     const pending$ = merge(
       // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
       enter$.pipe(mapTo(true)),
       blockers$.pipe(mapTo(false)),
-      fullData$.pipe(mapTo(false), startWith(false)))
+      fullData$.pipe(mapTo(false), startWith(false))
+    );
 
     const buttonText$ = pending$.pipe(
       map(isLoad => (isLoad ? "Loading" : "Go")),
@@ -185,7 +155,7 @@ export default {
       pending$,
       buttonText$,
       term$,
-      enter$,
+      enter$
     };
   }
 };
