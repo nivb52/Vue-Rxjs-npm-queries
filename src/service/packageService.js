@@ -1,4 +1,45 @@
-const extractPackageInfo = data => {
+
+  import { race, isObservable, timer } from "rxjs";
+ 
+  const CROS_URL = "https://cors-anywhere.herokuapp.com/";
+  const BASE_URL = "https://registry.npmjs.org/";
+
+
+  import { ajax } from 'rxjs/ajax';
+  import {
+    switchMap,
+    // catchError,
+    // tap,
+    // repeat,
+  } from "rxjs/operators";
+
+
+// ajax.getJSON(url)
+  const createAjax = url => race(timer(4000), ajax.getJSON(url)  );
+  
+  //  using cache and call ajax
+  const cache = {};
+  const cachePackage$ = data => {
+    const [name, version] = _extractPackageInfo(data);
+    const key = name + "-" + version;
+    return cache[key]
+      ? cache[key]
+      : (cache[key] = createAjax(
+          `${CROS_URL}${BASE_URL}${encodeURIComponent(
+            name
+          )}/${encodeURIComponent(version)}`
+        ));
+  };
+
+  const getPackage$ = (data$) => {
+    if (!isObservable(data$)) return cachePackage$(data$);
+    return data$.pipe(switchMap(data => cachePackage$({ data })));
+  };
+  // END AJAX STAFF
+  ///////////
+
+  
+  const _extractPackageInfo = data => {
     let name, version;
     if (typeof data === 'string') {
       [name, version] = data.split(' ');
@@ -27,48 +68,8 @@ const extractPackageInfo = data => {
     return [name, version];
   };
 
-  import { race, isObservable, timer } from "rxjs";
-  import { ajax } from 'rxjs/ajax';
-  import {
-    switchMap,
-    // catchError,
-    // tap,
-    // repeat,
-  } from "rxjs/operators";
-
-
-  const CROS_URL = "https://cors-anywhere.herokuapp.com/";
-  const BASE_URL = "https://registry.npmjs.org/";
-
-// ajax.getJSON(url)
-  const createAjax = url => race(timer(4000), ajax.getJSON(url)  );
-  
-  //  using cache and call ajax
-  const cache = {};
-  const cachePackage$ = data => {
-    const [name, version] = extractPackageInfo(data);
-    const key = name + "-" + version;
-    return cache[key]
-      ? cache[key]
-      : (cache[key] = createAjax(
-          `${CROS_URL}${BASE_URL}${encodeURIComponent(
-            name
-          )}/${encodeURIComponent(version)}`
-        ));
-  };
-
-  const getPackage$ = (data$) => {
-    if (!isObservable(data$)) return cachePackage$(data$);
-    return data$.pipe(switchMap(data => cachePackage$({ data })));
-  };
-  // END AJAX STAFF
-  ///////////
-
-
-
   
 const PackageService = { 
-  extractInfo : extractPackageInfo,
   getPackage$
 }
 export default PackageService
