@@ -14,10 +14,8 @@
   } from "rxjs/operators";
 
 
-  const createAjax = url => {
-  // console.log('createAjax',url.substr(CROS_URL.length + BASE_URL.length));
-  return race(timer(7000), ajax.getJSON(url) );
-}
+// ajax.getJSON(url)
+  const createAjax = url => race(timer(4000), ajax.getJSON(url)  );
   
   //  using cache and call ajax
   const cache = {};
@@ -32,12 +30,8 @@
           )}/${encodeURIComponent(version)}`
         ));
   };
-  
+
   const getPackage$ = (data$) => {
-    setTimeout(() => {
-      console.log('cache: \n' ,cache)
-    }, 15000);
-    
     if (!isObservable(data$)) return cachePackage$(data$);
     return data$.pipe(switchMap(data => cachePackage$({ data })));
   };
