@@ -1,6 +1,13 @@
 <template>
   <div id="app">
-    <input type="text" autofocus :disabled="pending$" v-on:keyup.enter="searchOnEnter" v-model="term" placeholder="express" />
+    <input
+      type="text"
+      autofocus
+      :disabled="pending$"
+      v-on:keyup.enter="doSearch"
+      v-model="term"
+      placeholder="express"
+    />
     <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'GO'}}</button>
     <button v-stream:click="cancelClick$">cancel</button>
     <!-- ========================= -->
@@ -48,15 +55,8 @@ export default {
   domStreams: ["click$", "cancelClick$"],
   data() {
     return {
-      term: "",
-      isEnter: false
+      term: ""
     };
-  },
-  methods: {
-    searchOnEnter: function() {
-      return this.$data.isEnter = true
-      
-    }
   },
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
@@ -81,37 +81,36 @@ export default {
     };
     // END AJAX STAFF
 
-    const blockers$ = this.cancelClick$.pipe(
-      tap(() => console.log("canceled"))
-    );
-
     const term$ = this.$watchAsObservable("term").pipe(
       pluck("newValue"),
       filter(value => value.trim() !== ""),
       // debounceTime(650)
     );
 
+    const blockers$ = this.cancelClick$.pipe(
+      tap(() => console.log("canceled")),
+    );
+    
     // --> --> -->
     // other implementation of enter key stroke
-    const enter$ = this.$watchAsObservable("isEnter").pipe(
-      tap(v => console.log(v)),
-      filter(val => val.newValue === true),
-      tap(_=> this.$data.isEnter = false),
+    // using the observable on method
+    const enter$ = this.$createObservableMethod("doSearch").pipe(
+      tap(_ => console.log(_)),
       mapTo(_ => of(true))
     );
 
-    const search$ = merge(this.click$, enter$ );
+    const search$ = race(blockers$, merge(this.click$, enter$));
 
     const fullData$ = search$
       .pipe(
         tap(_ => console.log("searching ...")),
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
-        takeUntil(blockers$),
+        // takeUntil(blockers$),
         // HANDLE AN ERROR
         catchError(err => {
           console.log("somemthing went wrong...", err);
-          of(`Bad Promise: ${error}`);
+          of(`Bad Promise: ${err}`);
           // return throwError(err);
         })
       )
@@ -133,7 +132,6 @@ export default {
     );
 
     const buttonText$ = pending$.pipe(
-      startWith('Check It !'),
       map(isLoad => (isLoad ? "Loading" : "Check it !"))
     );
 
