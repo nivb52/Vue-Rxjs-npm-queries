@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <input type="text" v-model="term$" placeholder="express"/>
-    <button :disabled="pending$" v-stream:click="click$">{{buttonText$}}</button>
+    <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'GO'}}</button>
     <button v-stream:click="cancelClick$">cancel</button>
     <h1>
       {{name$}}
@@ -29,6 +29,7 @@ import {
   switchMap,
   map,
   mapTo,
+  of,
   tap,
   catchError,
   share,
@@ -53,11 +54,13 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
+    // const package$ = n => createLoader(`${BASE_URL}`);
     const package$ = data => {
       let { name = data, version = "latest" } = data;
       version =
         version.substring(0, 1) === "~" ? version.substring(1) : version;
-      return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`);
+      return createLoader(`${CROS_URL}${BASE_URL}${encodeURIComponent(name)}/${encodeURIComponent(version)}`);
+      // return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`);
     };
 
 
@@ -67,7 +70,7 @@ export default {
     };
 
     const blockers$ = this.cancelClick$.pipe(
-      tap(() => console.log("canceled")),
+      tap(_ => console.log("canceled")),
     );
 
     const term$ = this.$fromDOMEvent("input", "keyup").pipe(
@@ -104,6 +107,7 @@ export default {
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
     const description$ = fullData$.pipe(pluck("description"));
+    // const dependencies$ = fullData$  // for testing
     //end full data
     
     // pending is bool,false = no loading
@@ -114,7 +118,7 @@ export default {
     );
 
     const buttonText$ = pending$.pipe(
-      startWith('Check it!'),
+      startWith('Check It!'),
       map(isLoad => (isLoad ? "Loading" : "Check it !"))
     );
 
