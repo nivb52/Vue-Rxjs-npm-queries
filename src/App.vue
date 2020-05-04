@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import { merge, of, from, isObservable } from "rxjs";
+import { merge, of, from, isObservable, timer } from "rxjs";
 import {
   pipe,
   filter,
@@ -80,7 +80,10 @@ export default {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
     const BASE_URL = "https://registry.npmjs.org/";
 
-    const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
+    // const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
+    // const createLoader = url => from(this.$http.get(url)).pipe(timeout(3000),repeat(2)).pipe(pluck("data"))
+    const createLoader = url =>
+      race(timer(1000), from(this.$http.get(url)).pipe(pluck("data")));
 
     const cache = {};
     const package$ = data => {
