@@ -21,32 +21,33 @@
         <div></div>
       </div>
     </div>
-    <!-- <div v-if="!pending$" class="lds-hourglass"></div> -->
 
-    <h1>
-      {{name$}}
-      <sup>{{version$}}</sup>
-    </h1>
-    <p v-if="!dependencies$ && description$">{{description$}}</p>
+    <article v-else>
+      <h1>
+        {{name$}}
+        <sup>{{version$}}</sup>
+      </h1>
+      <p v-if="!dependencies$ && description$">{{description$}}</p>
 
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <!-- /////////// -->
-    <ul class="tree">
-      <li
-        v-for="(version, name) in dependencies$"
-        :key="name"
-        v-stream:click="{ subject: click$, data: {name,version} }"
-      >
-        {{name}}
-        <sup>{{version}}</sup>
-      </li>
-    </ul>
+      <!-- /////////// -->
+      <!-- /////////// -->
+      <!-- /////////// -->
+      <ul class="tree">
+        <li
+          v-for="(version, name) in dependencies$"
+          :key="name"
+          v-stream:click="{ subject: click$, data: {name,version} }"
+        >
+          {{name}}
+          <sup>{{version}}</sup>
+        </li>
+      </ul>
+    </article>
   </div>
 </template>
 
 <script>
-import { merge, from, isObservable } from "rxjs";
+import { merge, of, from, isObservable } from "rxjs";
 import {
   pipe,
   filter,
@@ -54,7 +55,6 @@ import {
   switchMap,
   map,
   mapTo,
-  of,
   tap,
   catchError,
   share,
@@ -64,6 +64,7 @@ import {
   exhaustMap,
   debounceTime,
   delay,
+  timeout,
   repeat
 } from "rxjs/operators";
 
@@ -97,31 +98,28 @@ export default {
           ));
     };
 
-    const getPackage$ = (name$ = this.$data.term) => {
-      if (!isObservable(name$)) return package$(name$);
-      return name$.pipe(switchMap(name => package$({ name })));
+    const getPackage$ = (data$ = this.$data.term) => {
+      if (!isObservable(data$)) return package$(data$);
+      return data$.pipe(switchMap(data => package$({ data })));
     };
     // END AJAX STAFF
 
     const term$ = this.$watchAsObservable("term").pipe(
       pluck("newValue"),
       filter(value => value.trim() !== "")
-      // debounceTime(650)
     );
 
     const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
       filter(k => k.code === "Escape"),
       filter(_ => this.$data.term.trim() !== ""),
-      tap(_ => console.log("canceled")),
       mapTo(k => of(true))
     );
 
-    const cancelButton$ = this.cancelClick$.pipe(
-      tap(_ => console.log("canceled")),
-      mapTo(_ => of(true))
-    );
+    const cancelButton$ = this.cancelClick$.pipe(mapTo(_ => of(true)));
 
-    const blockers$ = merge(cancelButton$, esc$);
+    const blockers$ = merge(cancelButton$, esc$)
+      .pipe(tap(_ => console.log("canceled")))
+      .pipe(share());
 
     const enter$ = this.$createObservableMethod("doSearch").pipe(
       mapTo(_ => of(true))
@@ -131,12 +129,13 @@ export default {
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
         tap(_ => console.log("searching ...")),
-        // delay(4000),
+        delay(4000), // testing
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
         // HANDLE ERROR
         catchError(err => {
+          mapTo(_ => esc$);
           console.log("somemthing went wrong...", err);
           of(`Bad Promise: ${err}`);
           // return throwError(err);
@@ -157,8 +156,7 @@ export default {
       // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
       enter$.pipe(mapTo(true)),
-      this.cancelClick$.pipe(mapTo(false)),
-      esc$.pipe(mapTo(false)),
+      blockers$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
 
@@ -190,8 +188,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   margin: 60px auto;
-  display: flex;
-  justify-content: center;
+  text-align: center;
   box-sizing: border-box;
 }
 
