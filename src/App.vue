@@ -65,16 +65,21 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
+
+    const cache = {};
     const package$ = data => {
       let { name = data, version = "latest" } = data;
       version =
         version.substring(0, 1) === "~" ? version.substring(1) : version;
       name = name.trim();
-      return createLoader(
-        `${CROS_URL}${BASE_URL}${encodeURIComponent(name)}/${encodeURIComponent(
-          version
-        )}`
-      );
+      const key = name + "-" + version;
+      return cache[key]
+        ? cache[key]
+        : (cache[key] = createLoader(
+            `${CROS_URL}${BASE_URL}${encodeURIComponent(
+              name
+            )}/${encodeURIComponent(version)}`
+          ));
     };
 
     const getPackage$ = (name$ = this.$data.term) => {
@@ -89,14 +94,6 @@ export default {
       // debounceTime(650)
     );
 
-
-    const enter$ = this.$createObservableMethod("doSearch").pipe(
-      mapTo(_ => of(true))
-    );
-
-    // --> --> -->
-    // the esc
-    // other implementation of key stroke
     const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
       filter(k => k.code === "Escape"),
       filter(_ => this.$data.term.trim() !== ""),
@@ -111,18 +108,24 @@ export default {
 
     const blockers$ = merge(cancelButton$, esc$);
 
+    const enter$ = this.$createObservableMethod("doSearch").pipe(
+      mapTo(_ => of(true))
+    );
+
+    // const search$ = race(fullData$, blockers$).pipe(take(1), repeat());
+
     const fullData$ = merge(this.click$, enter$)
       .pipe(
         filter(_ => this.$data.term.trim() !== ""),
         tap(_ => console.log("searching ...")),
-        delay(4000),
+        // delay(4000),
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
-        // HANDLE AN ERROR
-        catchError(err => {
+        // HANDLE getPN ERROR
+        catchError(ergetP => {
           console.log("somemthing went wrong...", err);
-          of(`Bad Promise: ${err}`);
+          of(`Bad Promise: ${error}`);
           // return throwError(err);
         })
       )
@@ -135,8 +138,10 @@ export default {
     const description$ = fullData$.pipe(pluck("description"));
     //end full data
 
-    // pending is bool,false = no loading
+    // ===============
+    // app ui state
     const pending$ = merge(
+    // pending is bool,false = no loading
       this.click$.pipe(mapTo(true)),
       this.cancelClick$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
