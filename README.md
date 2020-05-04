@@ -2,6 +2,8 @@
 [See It Live](https://nivb52.github.io/Vue-Rxjs-npm-queries/) on Github Pages
 (psss...open the console) 
 
+### With Branches for Code Steps
+
 ### Rxjs 6  
 * ajax cache
 * taking keystrokes as observable (Enter and Escape)
