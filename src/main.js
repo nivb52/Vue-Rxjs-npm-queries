@@ -12,6 +12,12 @@ Vue.use(VueRx);
 Vue.use(VueAxios, axios);
 
 
+// UI --
+import 'buefy/dist/buefy.css';
+import { Toast } from 'buefy'
+Vue.use(Toast)
+//
+
 import './registerServiceWorker';
 // import store from './store'
 

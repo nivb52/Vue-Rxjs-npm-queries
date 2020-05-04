@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import { throwError, merge, race, of, from, isObservable, timer } from "rxjs";
+import { throwError, of, merge, race, from, isObservable, timer } from "rxjs";
 import {
   pipe,
   filter,
@@ -68,6 +68,7 @@ import {
   repeat,
   takeWhile
 } from "rxjs/operators";
+import { ToastProgrammatic as Toast } from "buefy";
 
 export default {
   name: "App",
@@ -76,6 +77,11 @@ export default {
     return {
       term: ""
     };
+  },
+  methods: {
+    createToast(msg, type = "is-info", position = "is-top") {
+      this.$buefy.toast.open({ duration: 3500, message: msg, position, type });
+    }
   },
   subscriptions() {
     const CROS_URL = "https://cors-anywhere.herokuapp.com/";
@@ -131,7 +137,9 @@ export default {
     const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
       filter(k => k.code === "Escape"),
       filter(_ => this.$data.term.trim() !== ""),
-      mapTo(k => of(true))
+      mapTo(k => of(true)),
+      filter(_ => pending$),
+      tap(_ => this.createToast(`operation canceled`))
     );
 
     const cancelButton$ = this.cancelClick$.pipe(mapTo(_ => of(true)));
@@ -153,13 +161,15 @@ export default {
         exhaustMap(data => getPackage$(data)),
         takeUntil(blockers$),
         catchError(err => {
-          console.log("something went wrong", err);
-          return this.cancelClick$.next(true);
+          const errorMsg = "something went wrong";
+          console.warn(errorMsg, err);
+          this.cancelClick$.next(true);
+          this.createToast(errorMsg, "is-danger", "is-bottom");
+          return of(errorMsg);
         })
       )
       // SHARE THE STREAM
       .pipe(share(), repeat());
-    // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
@@ -175,7 +185,6 @@ export default {
       blockers$.pipe(mapTo(false)),
       fullData$.pipe(mapTo(false), startWith(false))
     );
-    // .pipe(timer(6000), mapTo(_=> this.pending$.next(false) ))
 
     const buttonText$ = pending$.pipe(
       map(isLoad => (isLoad ? "Loading" : "Go")),
