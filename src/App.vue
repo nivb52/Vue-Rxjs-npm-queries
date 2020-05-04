@@ -8,7 +8,7 @@
       v-model="term"
       placeholder="express"
     />
-    <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'GO'}}</button>
+    <button :disabled="pending$" v-stream:click="click$">{{buttonText$ || 'Go'}}</button>
     <button v-stream:click="cancelClick$">cancel</button>
     <!-- ========================= -->
     <!-- // SHOW DATA  -->
@@ -47,7 +47,9 @@ import {
   take,
   startWith,
   exhaustMap,
-  debounceTime
+  debounceTime,
+  delay,
+  repeat
 } from "rxjs/operators";
 
 export default {
@@ -83,30 +85,40 @@ export default {
 
     const term$ = this.$watchAsObservable("term").pipe(
       pluck("newValue"),
-      filter(value => value.trim() !== ""),
+      filter(value => value.trim() !== "")
       // debounceTime(650)
     );
 
-    const blockers$ = this.cancelClick$.pipe(
-      tap(() => console.log("canceled")),
-    );
-    
-    // --> --> -->
-    // other implementation of enter key stroke
-    // using the observable on method
+
     const enter$ = this.$createObservableMethod("doSearch").pipe(
-      tap(_ => console.log(_)),
       mapTo(_ => of(true))
     );
 
-    const search$ = race(blockers$, merge(this.click$, enter$));
+    // --> --> -->
+    // the esc
+    // other implementation of key stroke
+    const esc$ = this.$fromDOMEvent("input", "keyup").pipe(
+      filter(k => k.code === "Escape"),
+      filter(_ => this.$data.term.trim() !== ""),
+      tap(_ => console.log("canceled")),
+      mapTo(k => of(true))
+    );
 
-    const fullData$ = search$
+    const cancelButton$ = this.cancelClick$.pipe(
+      tap(_ => console.log("canceled")),
+      mapTo(_ => of(true))
+    );
+
+    const blockers$ = merge(cancelButton$, esc$);
+
+    const fullData$ = merge(this.click$, enter$)
       .pipe(
+        filter(_ => this.$data.term.trim() !== ""),
         tap(_ => console.log("searching ...")),
+        delay(4000),
         pluck("data" || ""),
         exhaustMap(data => getPackage$(data)),
-        // takeUntil(blockers$),
+        takeUntil(blockers$),
         // HANDLE AN ERROR
         catchError(err => {
           console.log("somemthing went wrong...", err);
@@ -115,13 +127,12 @@ export default {
         })
       )
       // SHARE THE STREAM
-      .pipe(share());
+      .pipe(share(), repeat());
     // pluck the Data:
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
     const description$ = fullData$.pipe(pluck("description"));
-    // const dependencies$ = fullData$  // for testing
     //end full data
 
     // pending is bool,false = no loading
@@ -132,7 +143,8 @@ export default {
     );
 
     const buttonText$ = pending$.pipe(
-      map(isLoad => (isLoad ? "Loading" : "Check it !"))
+      map(isLoad => (isLoad ? "Loading" : "Go")),
+      startWith("Go")
     );
 
     return {
