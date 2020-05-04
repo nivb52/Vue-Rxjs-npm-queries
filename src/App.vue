@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <input type="text" v-model="term$" />
-    <button v-stream:click="click$">Load Data</button>
+    <button :disabled="disabled$" v-stream:click="click$">Load Data</button>
     <h1>
       {{name$}}
       <sup>{{version$}}</sup>
@@ -20,12 +20,13 @@
 </template>
 
 <script>
-import { from, isObservable } from "rxjs";
+import { merge, from, isObservable } from "rxjs";
 import {
   pipe,
   pluck,
   switchMap,
   map,
+  mapTo,
   of,
   tap,
   catchError,
@@ -46,16 +47,17 @@ export default {
     const BASE_URL = "https://registry.npmjs.org/";
 
     const createLoader = url => from(this.$http.get(url)).pipe(pluck("data"));
-    const package$ = (data) => {
-      let {name = data, version = 'latest'} = data
-      version = version.substring(0,1) === '~' ? version.substring(1) : version 
-      return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`)
-    }
-      
+    const package$ = data => {
+      let { name = data, version = "latest" } = data;
+      version =
+        version.substring(0, 1) === "~" ? version.substring(1) : version;
+      return createLoader(`${CROS_URL}${BASE_URL}${name}/${version}`);
+    };
 
     const getPackage$ = (name$ = term$) => {
-      if ( !isObservable(name$)) return package$(name$)
-      return name$.pipe(switchMap(name => package$({name})))};
+      if (!isObservable(name$)) return package$(name$);
+      return name$.pipe(switchMap(name => package$({ name })));
+    };
 
     const fullData$ = this.click$
       .pipe(
@@ -65,6 +67,7 @@ export default {
         catchError(err => {
           console.log("somemthing went wrong...", err);
           of(`Bad Promise: ${error}`);
+          // return throwError(err);
         })
       )
       // SHARE THE STREAM
@@ -72,17 +75,24 @@ export default {
 
     const name$ = fullData$.pipe(pluck("name"));
     const version$ = fullData$.pipe(pluck("version"));
+    // const dependencies$ = fullData$  // for testing
     const dependencies$ = fullData$.pipe(pluck("dependencies"));
     const term$ = this.$fromDOMEvent("input", "keyup").pipe(
       pluck("target", "value"),
       startWith("express")
     );
 
+    const disabled$ = merge(
+      this.click$.pipe(mapTo(true)),
+      fullData$.pipe(mapTo(false), startWith(false))
+    );
+
     return {
       name$,
       version$,
       dependencies$,
-      term$
+      term$,
+      disabled$
     };
   }
 };
@@ -103,6 +113,6 @@ ul.tree {
   padding-left: 0px;
 }
 ul.tree li {
-cursor: pointer;
+  cursor: pointer;
 }
 </style>
