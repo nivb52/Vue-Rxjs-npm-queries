@@ -15,20 +15,21 @@
 
 
 // ajax.getJSON(url)
-  const createAjax = url => race(timer(4000), ajax.getJSON(url)  );
+  const createAjax = url => race(timer(10000), ajax.getJSON(url)  );
   
   //  using cache and call ajax
   const cache = {};
-  const cachePackage$ = data => {
-    const [name, version] = _extractPackageInfo(data);
+  const cachePackage$ = data => { 
+    let [name, version] = _extractPackageInfo(data);
+    name = name.trim()
+    console.log(data , `${encodeURIComponent(name)}`);
+    return
     const key = name + "-" + version;
+    cache[key] && cache[key].name ? 
+                      cache[key] : 
+                      (cache[key] = createAjax(`${CROS_URL}${BASE_URL}${encodeURIComponent(name)}
+                                    /${encodeURIComponent(version)}`));
     return cache[key]
-      ? cache[key]
-      : (cache[key] = createAjax(
-          `${CROS_URL}${BASE_URL}${encodeURIComponent(
-            name
-          )}/${encodeURIComponent(version)}`
-        ));
   };
 
   const getPackage$ = (data$) => {
