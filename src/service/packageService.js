@@ -22,13 +22,10 @@
   const cachePackage$ = data => { 
     let [name, version] = _extractPackageInfo(data);
     name = name.trim()
-    console.log(data , `${encodeURIComponent(name)}`);
-    return
+    version = version? version.trim() : 'latest'
     const key = name + "-" + version;
-    cache[key] && cache[key].name ? 
-                      cache[key] : 
-                      (cache[key] = createAjax(`${CROS_URL}${BASE_URL}${encodeURIComponent(name)}
-                                    /${encodeURIComponent(version)}`));
+    cache[key] = cache[key] && cache[key].name ? cache[key] : 
+                      (cache[key] = createAjax(`${CROS_URL}${BASE_URL}${encodeURIComponent(name)}/${encodeURIComponent(version)}`));
     return cache[key]
   };
 
