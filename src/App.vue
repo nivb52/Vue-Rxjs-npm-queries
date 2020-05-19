@@ -31,14 +31,12 @@
       </h1>
       <p v-if="!dependencies$ && description$">{{description$}}</p>
       <ul class="tree">
-        <li
-          v-for="(version, name) in dependencies$"
-          :key="name"
-          v-stream:click="{ subject: click$, data: {name,version} }"
-        >
-          {{name}}
-          <sup>{{version}}</sup>
-        </li>
+        <node-tree
+        v-for="(version, name) in dependencies$"
+        :key="name"
+        :name="name"
+        :version="version"
+      ></node-tree>
       </ul>
     </article>
   </main>
@@ -67,9 +65,11 @@ import {
   takeWhile
 } from "rxjs/operators";
 import PackageService from "./service/packageService";
+import NodeTree from "./components/NodeTree";
 
 export default {
   name: "App",
+  components: {NodeTree},
   domStreams: ["click$", "cancelClick$"],
   data() {
     return {
